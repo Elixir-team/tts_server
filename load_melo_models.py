@@ -30,6 +30,7 @@ def download_and_save(url, save_path):
 
 output_dir = "melo_models"
 for lan_id, ckpt_url in DOWNLOAD_CKPT_URLS.items():
+    print("loading", lan_id)
     lan_dir = os.path.join(output_dir, lan_id)
     os.makedirs(lan_dir, exist_ok=True)
 
