@@ -17,10 +17,18 @@ speakers_ids = {
     "es": "ES",
     "fr": "FR",
     "jp": "JP",
-    "kr": "KR",
+    "ko": "KR",
     "zh": "ZH"
 }
 
+model_ids = {
+    "en": "EN",
+    "es": "ES",
+    "fr": "FR",
+    "jp": "JP",
+    "ko": "KR",
+    "zh": "ZH"
+}
 
 class MeloSynthesizer(BaseSynthesizer):
     def __init__(self, models: Dict[str, TTS]):
@@ -61,7 +69,8 @@ def init_melo_synthesizer(exclude: list = None):
 
         (model_path, config_path) = get_model_and_config(lang_path, ".pth", ".json")
 
-        models[lang] = TTS(language=lang.upper(), device=device, config_path=config_path, ckpt_path=model_path)
+        model_language = model_ids[lang]
+        models[lang] = TTS(language=model_language, device=device, config_path=config_path, ckpt_path=model_path)
         print(f"{lang} model initialized")
 
     return MeloSynthesizer(models)
