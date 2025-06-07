@@ -18,7 +18,7 @@ speakers_ids = {
     "es": "ES",
     "fr": "FR",
     "jp": "JP",
-    "kr": "KR",
+    "ko": "KR",
     "zh": "ZH"
 }
 
@@ -27,7 +27,7 @@ model_ids = {
     "es": "ES",
     "fr": "FR",
     "jp": "JP",
-    "kr": "KR",
+    "ko": "KR",
     "zh": "ZH"
 }
 
