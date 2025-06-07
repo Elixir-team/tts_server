@@ -16,7 +16,7 @@ speakers_ids = {
     "en": "EN-US",
     "es": "ES",
     "fr": "FR",
-    "jp": "JP",
+    "ja": "JP",
     "ko": "KR",
     "zh": "ZH"
 }
