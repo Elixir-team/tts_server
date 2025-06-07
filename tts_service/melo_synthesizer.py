@@ -1,8 +1,9 @@
 import os
 import io
+
 from tts_service.base_synthesizer import BaseSynthesizer
 from typing import Dict
-from melo.api import TTS
+from MeloTTS.melo.api import TTS
 from scipy.io.wavfile import write
 import nltk
 
@@ -17,7 +18,7 @@ speakers_ids = {
     "es": "ES",
     "fr": "FR",
     "jp": "JP",
-    "ko": "KR",
+    "kr": "KR",
     "zh": "ZH"
 }
 
@@ -26,7 +27,7 @@ model_ids = {
     "es": "ES",
     "fr": "FR",
     "jp": "JP",
-    "ko": "KR",
+    "kr": "KR",
     "zh": "ZH"
 }
 
@@ -53,8 +54,7 @@ class MeloSynthesizer(BaseSynthesizer):
         write(audio_buffer, model.hps.data.sampling_rate, audio_numpy)
         audio_buffer.seek(0)
 
-        return audio_buffer
-
+        return self._normalize_audio(audio_buffer)
 
 def init_melo_synthesizer(exclude: list = None):
     device = 'auto'
