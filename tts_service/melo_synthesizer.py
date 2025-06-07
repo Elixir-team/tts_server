@@ -25,7 +25,7 @@ model_ids = {
     "en": "EN",
     "es": "ES",
     "fr": "FR",
-    "jp": "JP",
+    "ja": "JP",
     "ko": "KR",
     "zh": "ZH"
 }
