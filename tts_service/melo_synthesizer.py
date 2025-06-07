@@ -3,7 +3,7 @@ import io
 
 from tts_service.base_synthesizer import BaseSynthesizer
 from typing import Dict
-from MeloTTS.melo.api import TTS
+from melo.api import TTS
 from scipy.io.wavfile import write
 import nltk
 
