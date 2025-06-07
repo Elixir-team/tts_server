@@ -34,7 +34,8 @@ class PiperSynthesizer(BaseSynthesizer):
         with wave.open(audio_buffer, "wb") as wav_file:
             self.models[language].synthesize(text, wav_file=wav_file, speaker_id=speaker_id)
         audio_buffer.seek(0)
-        return audio_buffer
+        
+        return self._normalize_audio(audio_buffer)
 
 
 def init_piper_synthesizer(exclude: list = None):
