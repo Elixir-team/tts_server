@@ -9,6 +9,9 @@ echo "🔄 Pulling latest changes from origin/master..."
 git pull origin master
 git submodule update --init --recursive
 
+apt-get update
+sudo apt-get install ffmpeg
+
 # Ensure git-lfs is installed
 command -v git-lfs >/dev/null 2>&1 || (brew install git-lfs || sudo apt-get install -y git-lfs && git lfs install)
 
