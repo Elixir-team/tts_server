@@ -51,7 +51,7 @@ def generate_tts(request: TTSRequest):
     start_time = time.time()
     audio_buffer = model.synthesize(lang, request.text)
 
-    write_time(start_time - time.time())
+    write_time(time.time() - start_time)
 
     return Response(content=audio_buffer.read(), media_type="audio/wav")
 
