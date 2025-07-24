@@ -1,17 +1,18 @@
 import time
 from datetime import datetime
-from io import BytesIO
-from pydub import AudioSegment
-
+from typing import Optional
 from fastapi import FastAPI, Response, HTTPException
 from pydantic import BaseModel
 import uvicorn
 import argparse
 import warnings
 
+from utils import audio_type_supported, get_default_mime_type, convert_audio
+
 warnings.simplefilter("ignore")
 
 from tts_service.melo_synthesizer import init_melo_synthesizer
+
 from tts_service.piper_synthesizer import init_piper_synthesizer
 
 parser = argparse.ArgumentParser(description="Speech-to-Text Server")
@@ -30,7 +31,7 @@ app = FastAPI()
 class TTSRequest(BaseModel):
     language: str
     text: str
-    format: str
+    mediaType: Optional[str]
 
 
 def write_time(time):
@@ -42,40 +43,18 @@ def write_time(time):
             f.write(result)
 
 
-supported_mime_types = {
-    "wav": "audio/wav",
-    "mp3": "audio/mpeg",
-    "ogg": "audio/ogg",
-    "flac": "audio/flac",
-    "aac": "audio/aac",
-    "m4a": "audio/mp4",
-    "opus": "audio/opus"
-}
-
-ffmpeg_format_aliases = {
-    "aac": "adts",
-    "m4a": "ipod"
-}
-
-def convert_audio(audio_buffer: BytesIO, target_format: str) -> BytesIO:
-    audio = AudioSegment.from_file(audio_buffer, format="wav")
-    out_buffer = BytesIO()
-
-    export_format = ffmpeg_format_aliases.get(target_format, target_format)
-    audio.export(out_buffer, format=export_format)
-    out_buffer.seek(0)
-    return out_buffer
-
 @app.post("/tts/synthesize/")
 def generate_tts(request: TTSRequest):
     lang = request.language
-    fmt = request.format.lower()
+    mime_type = request.mediaType
 
-    if fmt not in supported_mime_types:
-        raise HTTPException(status_code=400, detail=f"Unsupported format '{fmt}'")
+    if mime_type is None:
+        mime_type = get_default_mime_type()
+
+    if not audio_type_supported(mime_type):
+        raise HTTPException(status_code=400, detail=f"Unsupported format '{mime_type}'")
 
     model = next((m for m in models if m.has_lan(lang)), None)
-
     if model is None: raise HTTPException(status_code=400, detail=f"Language '{lang}' is not supported")
 
     print(f"🎤 Generate audio ({lang}): {request.text}")
@@ -84,10 +63,9 @@ def generate_tts(request: TTSRequest):
 
     write_time(time.time() - start_time)
 
-    if fmt != "wav":
-        audio_buffer = convert_audio(audio_buffer, fmt)
+    audio_buffer = convert_audio(audio_buffer, mime_type)
 
-    return Response(content=audio_buffer.read(), media_type=supported_mime_types[fmt])
+    return Response(content=audio_buffer.read(), media_type=mime_type)
 
 
 if __name__ == "__main__":
