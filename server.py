@@ -1,15 +1,18 @@
 import time
 from datetime import datetime
-
+from typing import Optional
 from fastapi import FastAPI, Response, HTTPException
 from pydantic import BaseModel
 import uvicorn
 import argparse
 import warnings
 
+from utils import audio_type_supported, get_default_mime_type, convert_audio
+
 warnings.simplefilter("ignore")
 
 from tts_service.melo_synthesizer import init_melo_synthesizer
+
 from tts_service.piper_synthesizer import init_piper_synthesizer
 
 parser = argparse.ArgumentParser(description="Speech-to-Text Server")
@@ -28,6 +31,7 @@ app = FastAPI()
 class TTSRequest(BaseModel):
     language: str
     text: str
+    mediaType: Optional[str]
 
 
 def write_time(time):
@@ -42,9 +46,15 @@ def write_time(time):
 @app.post("/tts/synthesize/")
 def generate_tts(request: TTSRequest):
     lang = request.language
+    mime_type = request.mediaType
+
+    if mime_type is None:
+        mime_type = get_default_mime_type()
+
+    if not audio_type_supported(mime_type):
+        raise HTTPException(status_code=400, detail=f"Unsupported format '{mime_type}'")
 
     model = next((m for m in models if m.has_lan(lang)), None)
-
     if model is None: raise HTTPException(status_code=400, detail=f"Language '{lang}' is not supported")
 
     print(f"🎤 Generate audio ({lang}): {request.text}")
@@ -53,7 +63,9 @@ def generate_tts(request: TTSRequest):
 
     write_time(time.time() - start_time)
 
-    return Response(content=audio_buffer.read(), media_type="audio/wav")
+    audio_buffer = convert_audio(audio_buffer, mime_type)
+
+    return Response(content=audio_buffer.read(), media_type=mime_type)
 
 
 if __name__ == "__main__":
