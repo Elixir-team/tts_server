@@ -1,6 +1,6 @@
 import time
 from datetime import datetime
-from typing import Optional
+from typing import Union
 from fastapi import FastAPI, Response, HTTPException
 from pydantic import BaseModel
 import uvicorn
@@ -31,7 +31,7 @@ app = FastAPI()
 class TTSRequest(BaseModel):
     language: str
     text: str
-    mediaType: Optional[str] = None
+    mediaType: Union[str, None] = None
 
 
 def write_time(time):
