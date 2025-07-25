@@ -31,7 +31,7 @@ app = FastAPI()
 class TTSRequest(BaseModel):
     language: str
     text: str
-    mediaType: Optional[str]
+    mediaType: Optional[str] = None
 
 
 def write_time(time):
