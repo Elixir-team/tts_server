@@ -9,6 +9,10 @@ echo "🔄 Pulling latest changes from origin/master..."
 git pull origin master
 git submodule update --init --recursive
 
+if [ -f "${SCRIPT_DIR}/requirements.txt" ]; then
+    pip install -r "${SCRIPT_DIR}/requirements.txt"
+fi
+
 apt-get update
 apt install -y ffmpeg
 
