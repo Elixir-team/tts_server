@@ -6,8 +6,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PORT=8000 \
     DEFAULT_MEDIA_TYPE=audio/mpeg \
     NLTK_DATA=/usr/local/share/nltk_data \
-    MELO_MODELS_DIR=/app/melo_models \
-    PIPER_MODELS_DIR=/app/piper_models
+    MELO_MODELS_DIR=/runpod-volume/tts-models/melo_models \
+    PIPER_MODELS_DIR=/runpod-volume/tts-models/piper_models
 
 WORKDIR /app
 
@@ -42,12 +42,12 @@ RUN python -m pip install -r requirements.txt \
     && python -m pip install ./MeloTTS \
     && python -c "import pkg_resources" \
     && python -m unidic download \
-    && python -c "import nltk; nltk.download('averaged_perceptron_tagger_eng', download_dir='/usr/local/share/nltk_data')"
+    && python -c "import nltk; nltk.download('averaged_perceptron_tagger_eng', download_dir='/usr/local/share/nltk_data'); nltk.download('cmudict', download_dir='/usr/local/share/nltk_data')" \
+    && apt-get purge -y --auto-remove build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY server.py utils.py start.sh ./
 COPY tts_service ./tts_service
-COPY melo_models ./melo_models
-COPY piper_models ./piper_models
 
 RUN chmod +x /app/start.sh
 

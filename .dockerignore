@@ -8,6 +8,8 @@ __pycache__
 client.py
 load_melo_models.py
 requirements-client.txt
+melo_models
+piper_models
 MeloTTS/.git
 MeloTTS/__pycache__
 MeloTTS/.pytest_cache
