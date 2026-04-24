@@ -1,17 +1,15 @@
-import os
 import io
-
-from tts_service.base_synthesizer import BaseSynthesizer
+import os
 from typing import Dict
+
+import nltk
 from melo.api import TTS
 from scipy.io.wavfile import write
-import nltk
 
-from utils import get_model_and_config, abs_path
+from tts_service.base_synthesizer import BaseSynthesizer
+from utils import abs_path, get_model_and_config
 
-nltk.download('averaged_perceptron_tagger_eng')
-
-MODELS_DIR = abs_path("melo_models")
+MODELS_DIR = abs_path(os.getenv("MELO_MODELS_DIR", "melo_models"))
 
 speakers_ids = {
     "en": "EN-US",
@@ -19,7 +17,7 @@ speakers_ids = {
     "fr": "FR",
     "ja": "JP",
     "ko": "KR",
-    "zh": "ZH"
+    "zh": "ZH",
 }
 
 model_ids = {
@@ -28,15 +26,16 @@ model_ids = {
     "fr": "FR",
     "ja": "JP",
     "ko": "KR",
-    "zh": "ZH"
+    "zh": "ZH",
 }
+
 
 class MeloSynthesizer(BaseSynthesizer):
     def __init__(self, models: Dict[str, TTS]):
         self.models = models
 
     def supported_languages(self):
-        return self.models.keys()
+        return sorted(self.models.keys())
 
     def has_lan(self, language: str):
         return language in self.models
@@ -56,19 +55,36 @@ class MeloSynthesizer(BaseSynthesizer):
 
         return self._normalize_audio(audio_buffer)
 
+
+def ensure_nltk_resource():
+    try:
+        nltk.data.find("taggers/averaged_perceptron_tagger_eng")
+    except LookupError as exc:
+        raise RuntimeError(
+            "NLTK resource 'averaged_perceptron_tagger_eng' is missing. "
+            "Download it during image build."
+        ) from exc
+
+
 def init_melo_synthesizer(exclude: list = None):
-    device = 'auto'
+    ensure_nltk_resource()
+
+    if not os.path.isdir(MODELS_DIR):
+        raise FileNotFoundError(f"Melo models directory '{MODELS_DIR}' does not exist")
+
+    device = os.getenv("MELO_DEVICE", "auto")
 
     print("Initialize melo models:")
     models = {}
-    for lang in os.listdir(MODELS_DIR):
+    for lang in sorted(os.listdir(MODELS_DIR)):
         if exclude is not None and lang in exclude:
             continue
 
         lang_path = os.path.join(MODELS_DIR, lang)
+        if not os.path.isdir(lang_path) or lang not in model_ids:
+            continue
 
-        (model_path, config_path) = get_model_and_config(lang_path, ".pth", ".json")
-
+        model_path, config_path = get_model_and_config(lang_path, ".pth", ".json")
         model_language = model_ids[lang]
         models[lang] = TTS(language=model_language, device=device, config_path=config_path, ckpt_path=model_path)
         print(f"{lang} model initialized")

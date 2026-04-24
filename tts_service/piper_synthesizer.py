@@ -1,16 +1,17 @@
-import os
 import io
+import os
 import wave
-from piper import PiperVoice
-from tts_service.base_synthesizer import BaseSynthesizer
 from typing import Dict
 
-from utils import get_model_and_config, abs_path
+from piper import PiperVoice
 
-MODELS_DIR = abs_path("piper_models")
+from tts_service.base_synthesizer import BaseSynthesizer
+from utils import abs_path, get_model_and_config
+
+MODELS_DIR = abs_path(os.getenv("PIPER_MODELS_DIR", "piper_models"))
 
 speakers_ids = {
-    "sr": 1  # hsb
+    "sr": 1,
 }
 
 
@@ -19,7 +20,7 @@ class PiperSynthesizer(BaseSynthesizer):
         self.models = models
 
     def supported_languages(self):
-        return self.models.keys()
+        return sorted(self.models.keys())
 
     def has_lan(self, language: str):
         return language in self.models
@@ -34,22 +35,33 @@ class PiperSynthesizer(BaseSynthesizer):
         with wave.open(audio_buffer, "wb") as wav_file:
             self.models[language].synthesize(text, wav_file=wav_file, speaker_id=speaker_id)
         audio_buffer.seek(0)
-        
+
         return self._normalize_audio(audio_buffer)
 
 
+def is_truthy(value: str):
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def init_piper_synthesizer(exclude: list = None):
+    if not os.path.isdir(MODELS_DIR):
+        raise FileNotFoundError(f"Piper models directory '{MODELS_DIR}' does not exist")
+
+    use_cuda = is_truthy(os.getenv("PIPER_USE_CUDA", "false"))
+
     print("Initialize piper models:")
     models = {}
-    for lang in os.listdir(MODELS_DIR):
+    for lang in sorted(os.listdir(MODELS_DIR)):
         if exclude is not None and lang in exclude:
             continue
 
         lang_path = os.path.join(MODELS_DIR, lang)
+        if not os.path.isdir(lang_path):
+            continue
 
-        (model_path, config_path) = get_model_and_config(lang_path, ".onnx", ".json")
+        model_path, config_path = get_model_and_config(lang_path, ".onnx", ".json")
 
-        models[lang] = PiperVoice.load(model_path, config_path)
+        models[lang] = PiperVoice.load(model_path, config_path, use_cuda=use_cuda)
         print(f"{lang} model initialized")
 
     return PiperSynthesizer(models)
