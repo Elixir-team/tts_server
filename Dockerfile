@@ -1,38 +1,41 @@
-FROM python:3.10-slim
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PORT=8000 \
-    DEFAULT_MEDIA_TYPE=audio/mpeg \
     NLTK_DATA=/usr/local/share/nltk_data \
-    MELO_MODELS_DIR=/runpod-volume/tts-models/melo_models \
-    PIPER_MODELS_DIR=/runpod-volume/tts-models/piper_models
+    MELO_DEVICE=cuda \
+    PIPER_USE_CUDA=true
 
 WORKDIR /app
 
 RUN set -eux; \
-    if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
-        cp /etc/apt/sources.list.d/debian.sources /etc/apt/sources.list.d/debian.sources.bak; \
-        sed -E 's/\btrixie-updates\b//g; s/  +/ /g; s/^Suites: $//g; s/^Suites: /Suites: /g' /etc/apt/sources.list.d/debian.sources.bak | sed '/^Suites: $/d' > /etc/apt/sources.list.d/debian.sources; \
+    if [ -f /etc/apt/sources.list ]; then \
+        sed -i '/jammy-backports/d' /etc/apt/sources.list; \
+        sed -i 's|http://archive.ubuntu.com/ubuntu|http://mirrors.edge.kernel.org/ubuntu|g' /etc/apt/sources.list; \
+    fi; \
+    if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then \
+        sed -i '/jammy-backports/d' /etc/apt/sources.list.d/ubuntu.sources; \
+        sed -i 's|http://archive.ubuntu.com/ubuntu|http://mirrors.edge.kernel.org/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources; \
     fi; \
     apt-get update -o Acquire::Retries=10 -y; \
-    installed=0; \
     for i in 1 2 3; do \
         apt-get install -o Acquire::Retries=10 --fix-missing -y --no-install-recommends \
             build-essential \
             ffmpeg \
-            libsndfile1 && installed=1 && break; \
+            libsndfile1 \
+            python3 \
+            python3-pip && break; \
         sleep 15; \
     done; \
-    test "$installed" = "1"; \
-    command -v ffmpeg; \
-    command -v ffprobe; \
     rm -rf /var/lib/apt/lists/*
+
+RUN ln -sf /usr/bin/python3 /usr/bin/python
 
 RUN python -m pip install --upgrade pip \
     && python -m pip install "setuptools<81" wheel \
-    && python -m pip install torch==2.7.0 torchaudio==2.7.0 --index-url https://download.pytorch.org/whl/cpu
+    && python -m pip install torch==2.6.0+cu124 torchaudio==2.6.0+cu124 --index-url https://download.pytorch.org/whl/cu124
 
 COPY requirements.txt ./
 COPY MeloTTS ./MeloTTS
@@ -48,6 +51,8 @@ RUN python -m pip install -r requirements.txt \
 
 COPY server.py utils.py start.sh ./
 COPY tts_service ./tts_service
+COPY melo_models ./melo_models
+COPY piper_models ./piper_models
 
 RUN chmod +x /app/start.sh
 

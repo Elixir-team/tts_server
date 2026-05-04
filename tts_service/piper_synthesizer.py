@@ -5,10 +5,9 @@ from typing import Dict
 
 from piper import PiperVoice
 
+from config import get_piper_models_dir, get_piper_use_cuda
 from tts_service.base_synthesizer import BaseSynthesizer
-from utils import abs_path, get_model_and_config
-
-MODELS_DIR = abs_path(os.getenv("PIPER_MODELS_DIR", "piper_models"))
+from utils import get_model_and_config
 
 speakers_ids = {
     "sr": 1,
@@ -38,24 +37,20 @@ class PiperSynthesizer(BaseSynthesizer):
 
         return self._normalize_audio(audio_buffer)
 
-
-def is_truthy(value: str):
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
 def init_piper_synthesizer(exclude: list = None):
-    if not os.path.isdir(MODELS_DIR):
-        raise FileNotFoundError(f"Piper models directory '{MODELS_DIR}' does not exist")
+    models_dir = get_piper_models_dir()
+    use_cuda = get_piper_use_cuda()
 
-    use_cuda = is_truthy(os.getenv("PIPER_USE_CUDA", "false"))
+    if not os.path.isdir(models_dir):
+        raise FileNotFoundError(f"Piper models directory '{models_dir}' does not exist")
 
     print("Initialize piper models:")
     models = {}
-    for lang in sorted(os.listdir(MODELS_DIR)):
+    for lang in sorted(os.listdir(models_dir)):
         if exclude is not None and lang in exclude:
             continue
 
-        lang_path = os.path.join(MODELS_DIR, lang)
+        lang_path = os.path.join(models_dir, lang)
         if not os.path.isdir(lang_path):
             continue
 

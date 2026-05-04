@@ -3,7 +3,8 @@ from io import BytesIO
 
 from pydub import AudioSegment
 
-DEFAULT_MIME_TYPE = "audio/mpeg"
+from config import DEFAULT_MEDIA_TYPE
+
 SUPPORTED_MIME_TYPES = {
     "raw": "audio/raw",
     "audio/raw": "audio/raw",
@@ -60,7 +61,7 @@ def normalize_audio_type(media_type: str | None):
 
 
 def get_default_mime_type():
-    return normalize_audio_type(os.getenv("DEFAULT_MEDIA_TYPE", DEFAULT_MIME_TYPE)) or DEFAULT_MIME_TYPE
+    return normalize_audio_type(DEFAULT_MEDIA_TYPE) or DEFAULT_MEDIA_TYPE
 
 
 def get_public_media_type(media_type: str):
