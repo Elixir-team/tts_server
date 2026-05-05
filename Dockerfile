@@ -49,7 +49,7 @@ RUN python -m pip install -r requirements.txt \
     && apt-get purge -y --auto-remove build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-COPY server.py utils.py start.sh ./
+COPY server.py utils.py start.sh config.py ./
 COPY tts_service ./tts_service
 COPY melo_models ./melo_models
 COPY piper_models ./piper_models

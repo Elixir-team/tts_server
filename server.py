@@ -1,4 +1,6 @@
 import argparse
+import copy
+import logging
 import time
 import warnings
 from threading import Lock, Thread
@@ -32,6 +34,26 @@ models_ready = False
 models_load_error = None
 models_lock = Lock()
 models_loading_started = False
+
+
+class HealthCheckAccessFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        return '"GET /ping HTTP/1.1" 200' not in message and '"GET /ping HTTP/1.1" 204' not in message
+
+
+def build_log_config():
+    log_config = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
+    access_logger = log_config["loggers"].get("uvicorn.access")
+    if access_logger is None:
+        return log_config
+
+    log_config.setdefault("filters", {})
+    log_config["filters"]["health_check_access_filter"] = {
+        "()": HealthCheckAccessFilter,
+    }
+    access_logger["filters"] = ["health_check_access_filter"]
+    return log_config
 
 
 class TTSRequest(BaseModel):
@@ -141,4 +163,4 @@ def generate_tts(request: TTSRequest):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host=args.host, port=args.port)
+    uvicorn.run(app, host=args.host, port=args.port, log_config=build_log_config())
