@@ -3,7 +3,6 @@ import copy
 import logging
 import time
 import warnings
-from threading import Lock, Thread
 from typing import Union
 
 from fastapi import FastAPI, HTTPException, Response
@@ -28,12 +27,6 @@ parser = argparse.ArgumentParser(description="Text-to-Speech Server")
 parser.add_argument("--host", type=str, default=get_host(), help="Server host")
 parser.add_argument("--port", type=int, default=get_port(), help="Server port")
 args = parser.parse_args()
-
-models = []
-models_ready = False
-models_load_error = None
-models_lock = Lock()
-models_loading_started = False
 
 
 class HealthCheckAccessFilter(logging.Filter):
@@ -73,73 +66,32 @@ def supported_languages():
     return sorted(all_languages)
 
 
-def load_models_once():
-    global models
-    global models_ready
-    global models_load_error
-    global models_loading_started
+def load_models():
+    print("Initialize Melo models")
+    melo_model = init_melo_synthesizer()
 
-    with models_lock:
-        if models_ready or models_load_error is not None or models_loading_started:
-            return
-        models_loading_started = True
+    print("Initialize Piper models")
+    piper_model = init_piper_synthesizer(exclude=melo_model.supported_languages())
 
-    try:
-        print("Initialize Melo models")
-        melo_model = init_melo_synthesizer()
-
-        print("Initialize Piper models")
-        piper_model = init_piper_synthesizer(exclude=melo_model.supported_languages())
-
-        loaded_models = [melo_model, piper_model]
-
-        with models_lock:
-            models = loaded_models
-            models_ready = True
-
-        print("TTS models initialized:", ", ".join(supported_languages()))
-    except Exception as exc:
-        with models_lock:
-            models_load_error = exc
-        print("Failed to initialize TTS models:", exc)
+    loaded_models = [melo_model, piper_model]
+    print("TTS models initialized:", ", ".join(sorted({
+        language
+        for model in loaded_models
+        for language in model.supported_languages()
+    })))
+    return loaded_models
 
 
-def ensure_models_loading_started():
-    with models_lock:
-        already_started = models_loading_started or models_ready or models_load_error is not None
-
-    if already_started:
-        return
-
-    loader_thread = Thread(target=load_models_once, daemon=True)
-    loader_thread.start()
-
-
-@app.on_event("startup")
-async def startup_event():
-    ensure_models_loading_started()
+models = load_models()
 
 
 @app.get("/ping")
 async def ping():
-    if models_ready:
-        return {"status": "healthy", "languages": supported_languages()}
-
-    if models_load_error is not None:
-        raise HTTPException(status_code=500, detail=f"Model initialization failed: {models_load_error}")
-
-    ensure_models_loading_started()
-    return Response(status_code=204)
+    return {"status": "healthy", "languages": supported_languages()}
 
 
 @app.post("/tts/synthesize/")
 def generate_tts(request: TTSRequest):
-    if models_load_error is not None:
-        raise HTTPException(status_code=500, detail=f"Model initialization failed: {models_load_error}")
-
-    if not models_ready:
-        raise HTTPException(status_code=503, detail="Models are still initializing")
-
     mime_type = normalize_audio_type(request.mediaType)
     if mime_type is None:
         mime_type = normalize_audio_type(get_default_media_type())
