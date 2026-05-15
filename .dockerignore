@@ -1,0 +1,15 @@
+.git
+.idea
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.log
+client.py
+load_melo_models.py
+requirements-client.txt
+MeloTTS/.git
+MeloTTS/__pycache__
+MeloTTS/.pytest_cache
+MeloTTS/docs
+MeloTTS/test

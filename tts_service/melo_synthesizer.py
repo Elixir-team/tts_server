@@ -1,17 +1,13 @@
-import os
 import io
-
-from tts_service.base_synthesizer import BaseSynthesizer
+import os
 from typing import Dict
+
 from melo.api import TTS
 from scipy.io.wavfile import write
-import nltk
 
-from utils import get_model_and_config, abs_path
-
-nltk.download('averaged_perceptron_tagger_eng')
-
-MODELS_DIR = abs_path("melo_models")
+from config import get_melo_device, get_melo_models_dir
+from tts_service.base_synthesizer import BaseSynthesizer
+from utils import get_model_and_config
 
 speakers_ids = {
     "en": "EN-US",
@@ -19,7 +15,7 @@ speakers_ids = {
     "fr": "FR",
     "ja": "JP",
     "ko": "KR",
-    "zh": "ZH"
+    "zh": "ZH",
 }
 
 model_ids = {
@@ -28,15 +24,16 @@ model_ids = {
     "fr": "FR",
     "ja": "JP",
     "ko": "KR",
-    "zh": "ZH"
+    "zh": "ZH",
 }
+
 
 class MeloSynthesizer(BaseSynthesizer):
     def __init__(self, models: Dict[str, TTS]):
         self.models = models
 
     def supported_languages(self):
-        return self.models.keys()
+        return sorted(self.models.keys())
 
     def has_lan(self, language: str):
         return language in self.models
@@ -56,21 +53,32 @@ class MeloSynthesizer(BaseSynthesizer):
 
         return self._normalize_audio(audio_buffer)
 
+
 def init_melo_synthesizer(exclude: list = None):
-    device = 'auto'
+    models_dir = get_melo_models_dir()
+    device = get_melo_device()
+
+    if not os.path.isdir(models_dir):
+        raise FileNotFoundError(f"Melo models directory '{models_dir}' does not exist")
 
     print("Initialize melo models:")
     models = {}
-    for lang in os.listdir(MODELS_DIR):
+    for lang in sorted(os.listdir(models_dir)):
         if exclude is not None and lang in exclude:
             continue
 
-        lang_path = os.path.join(MODELS_DIR, lang)
+        lang_path = os.path.join(models_dir, lang)
+        if not os.path.isdir(lang_path) or lang not in model_ids:
+            continue
 
-        (model_path, config_path) = get_model_and_config(lang_path, ".pth", ".json")
-
+        model_path, config_path = get_model_and_config(lang_path, ".pth", ".json")
         model_language = model_ids[lang]
-        models[lang] = TTS(language=model_language, device=device, config_path=config_path, ckpt_path=model_path)
+        models[lang] = TTS(
+            language=model_language,
+            device=device,
+            config_path=config_path,
+            ckpt_path=model_path,
+        )
         print(f"{lang} model initialized")
 
     return MeloSynthesizer(models)

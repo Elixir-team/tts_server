@@ -1,23 +1,9 @@
-#!/bin/bash
+#!/bin/sh
 
-set -e
+set -eu
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd /app
 
-cd "$SCRIPT_DIR"
-echo "🔄 Pulling latest changes from origin/master..."
-git pull origin master
-git submodule update --init --recursive
-
-if [ -f "${SCRIPT_DIR}/requirements.txt" ]; then
-    pip install -r "${SCRIPT_DIR}/requirements.txt"
-fi
-
-apt-get update
-apt install -y ffmpeg
-
-# Ensure git-lfs is installed
-command -v git-lfs >/dev/null 2>&1 || (brew install git-lfs || sudo apt-get install -y git-lfs && git lfs install)
-
-echo "📦 Pulling large files with Git LFS..."
-git lfs pull
+exec python server.py \
+  --host "${HOST:-0.0.0.0}" \
+  --port "${PORT:-8000}"
