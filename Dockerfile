@@ -34,15 +34,17 @@ RUN set -eux; \
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
 RUN python -m pip install --upgrade pip \
-    && python -m pip install "setuptools<81" wheel \
-    && python -m pip install torch==2.6.0+cu124 torchaudio==2.6.0+cu124 --index-url https://download.pytorch.org/whl/cu124
+    && python -m pip install "setuptools<81" wheel
 
 COPY requirements.txt ./
 COPY MeloTTS ./MeloTTS
 
 RUN python -m pip install -r requirements.txt \
     && python -m pip install piper-tts==1.2.0 piper-phonemize==1.1.0 \
-    && python -m pip install ./MeloTTS \
+    && grep -Ev '^(torch|torchaudio|torchvision|triton)($|[<>=~! ])' MeloTTS/requirements.txt > /tmp/melotts-requirements-no-torch.txt \
+    && python -m pip install -r /tmp/melotts-requirements-no-torch.txt \
+    && python -m pip install torch==2.11.0+cu128 torchvision==0.26.0+cu128 torchaudio==2.11.0+cu128 --index-url https://download.pytorch.org/whl/cu128 \
+    && python -m pip install ./MeloTTS --no-deps \
     && python -c "import pkg_resources" \
     && python -m unidic download \
     && python -c "import nltk; nltk.download('averaged_perceptron_tagger_eng', download_dir='/usr/local/share/nltk_data'); nltk.download('cmudict', download_dir='/usr/local/share/nltk_data')" \
