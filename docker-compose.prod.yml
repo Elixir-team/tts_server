@@ -1,15 +1,37 @@
 services:
   tts:
-    image: antonijzelinskij/tts:trial-databasemart
+    image: antonijzelinskij/tts:trial-databasemart-cu128
     container_name: elixir-tts
     restart: unless-stopped
     runtime: nvidia
     command: ["/app/start.sh"]
+
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-    ports:
-      - "8002:8000"
+
+    expose:
+      - "8000"
+
+    labels:
+      - "traefik.enable=true"
+
+      - "traefik.http.routers.elixir-tts.rule=Host(`tts.elixirlab.io`)"
+      - "traefik.http.routers.elixir-tts.entrypoints=websecure"
+      - "traefik.http.routers.elixir-tts.tls=true"
+      - "traefik.http.routers.elixir-tts.tls.certresolver=letsencrypt"
+
+      - "traefik.http.routers.elixir-tts.middlewares=tts-allowlist,tts-ratelimit,tts-buffer"
+
+      - "traefik.http.middlewares.tts-allowlist.ipallowlist.sourcerange=91.108.121.87/32,72.62.92.110/32"
+
+      - "traefik.http.middlewares.tts-ratelimit.ratelimit.average=20"
+      - "traefik.http.middlewares.tts-ratelimit.ratelimit.burst=40"
+
+      - "traefik.http.middlewares.tts-buffer.buffering.maxRequestBodyBytes=10485760"
+
+      - "traefik.http.services.elixir-tts.loadbalancer.server.port=8000"
+
     healthcheck:
       test:
         [
@@ -22,8 +44,16 @@ services:
       timeout: 10s
       retries: 3
       start_period: 180s
+
     logging:
       driver: json-file
       options:
         max-size: "50m"
         max-file: "5"
+
+    networks:
+      - elixir-gpu-net
+
+networks:
+  elixir-gpu-net:
+    external: true
